@@ -4,7 +4,7 @@ const { fetchHtml } = require("../utils/scraper");
 const BASE = "https://hopamviet.vn";
 
 async function getLatest(page = 1) {
-    const url = `${BASE}/chord/latest.html${page > 1 ? `?page=${page}` : ""}`;
+    const url = `${BASE}/chord/latest${page > 1 ? `?page=${page}` : ""}`;
     const html = await fetchHtml(url, 20000);
     const $ = cheerio.load(html);
 
