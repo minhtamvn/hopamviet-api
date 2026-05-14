@@ -18,7 +18,7 @@ async function getLatest(page = 1) {
     const totalCount = countMatch ? parseInt(countMatch[1].replace(/,/g, "")) : 0;
 
     const songs = [];
-    $("a.song-card").each((i, el) => {
+    $('div[class*="col-span-8"] a.song-card').each((i, el) => {
         const href = $(el).attr("href");
         const title = $(el).find(".font-bold").first().text().replace(/\s+/g, " ").trim();
         const artist = $(el).find(".truncate").eq(1).text().replace(/\s+/g, " ").trim();

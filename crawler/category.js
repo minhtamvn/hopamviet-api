@@ -33,9 +33,9 @@ async function getCategory(categoryId, categorySlug = "", page = 1) {
     const countMatch = html.match(/(\d[\d,.]*)\s*bài hát/);
     const totalCount = countMatch ? parseInt(countMatch[1].replace(/,/g, "")) : 0;
 
-    // Parse song cards
+    // Parse song cards - only main content (col-span-8), exclude sidebar trending
     const songs = [];
-    $("a.song-card").each((i, el) => {
+    $('div[class*="col-span-8"] a.song-card').each((i, el) => {
         const href = $(el).attr("href");
         const title = $(el).find(".font-bold").first().text().replace(/\s+/g, " ").trim();
         const artist = $(el).find(".truncate").eq(1).text().replace(/\s+/g, " ").trim();
