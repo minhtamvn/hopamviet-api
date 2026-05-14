@@ -12,6 +12,7 @@ const searchRoute = require("./routes/search");
 const songRoute = require("./routes/song");
 const trendingRoute = require("./routes/trending");
 const categoryRoute = require("./routes/category");
+const rhythmRoute = require("./routes/rhythm");
 
 // =========================
 // MIDDLEWARE
@@ -27,6 +28,7 @@ app.use("/api/search", searchRoute);
 app.use("/api/song", songRoute);
 app.use("/api/trending", trendingRoute);
 app.use("/api/category", categoryRoute);
+app.use("/api/rhythm", rhythmRoute);
 
 // =========================
 // START
