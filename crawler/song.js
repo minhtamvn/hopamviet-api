@@ -29,20 +29,91 @@ async function getSong(url) {
 
     // Thể loại (category) - from JSON-LD BreadcrumbList position 2
     let category = "";
+    let categoryId = "";
+    let categorySlug = "";
     const breadcrumbRegex = /"@type":\s*"BreadcrumbList"[\s\S]*?"itemListElement":\s*\[([\s\S]*?)\]/g;
     while ((match = breadcrumbRegex.exec(html)) !== null) {
         const items = match[1];
-        const pos2Match = items.match(/"position":\s*2[\s\S]*?"name":\s*"([^"]+)"/);
+        const pos2Match = items.match(/"position":\s*2[\s\S]*?"name":\s*"([^"]+)"[\s\S]*?"item":\s*"([^"]+)"/);
         if (pos2Match) {
             category = pos2Match[1];
+            const urlMatch = pos2Match[2].match(/\/category\/(\d+)\/([^\.]+)/);
+            if (urlMatch) {
+                categoryId = urlMatch[1];
+                categorySlug = urlMatch[2];
+            }
             break;
         }
     }
 
-    // Điệu (rhythm)
+    // Điệu (rhythm) - name from label, ID + slug from dropdown links
     let rhythm = $("#currentRhythmLabel").text().trim();
     if (!rhythm || rhythm === "Chọn điệu") {
         rhythm = "";
+    }
+    let rhythmId = "";
+    let rhythmSlug = "";
+    if (rhythm) {
+        // Parse rhythm dropdown links to find matching ID for current rhythm name
+        const rhythmDropdownRegex = /\/chord\/rhythm\/(\d+)\/([^"']+)/g;
+        const rhythmMap = {};
+        let rm;
+        while ((rm = rhythmDropdownRegex.exec(html)) !== null) {
+            const parts = rm[0].match(/\/rhythm\/(\d+)\/([^"']+)/);
+            if (parts) {
+                rhythmMap[parts[2]] = { id: parts[1], slug: parts[2] };
+            }
+        }
+        // Find the rhythm link that matches the current rhythm name
+        // The selected rhythm typically appears as a link with the rhythm name as text
+        // Map slug to name: bobero->Boléro, ballad->Ballad, etc.
+        for (const slug of Object.keys(rhythmMap)) {
+            const displayName = slug
+                .split("-")
+                .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+                .join(" ");
+            if (displayName.toLowerCase() === rhythm.toLowerCase() ||
+                slug.toLowerCase() === rhythm.toLowerCase().replace(/\s+/g, "-")) {
+                rhythmId = rhythmMap[slug].id;
+                rhythmSlug = rhythmMap[slug].slug;
+                break;
+            }
+        }
+        // Fallback: try exact match with known mapping
+        if (!rhythmId) {
+            const knownRhythms = {
+                "Boléro": { id: "1", slug: "bobero" },
+                "Slow": { id: "2", slug: "slow" },
+                "Slow Rock": { id: "3", slug: "slow-rock" },
+                "Slow Surf": { id: "4", slug: "slow-surf" },
+                "Blues": { id: "5", slug: "blues" },
+                "Ballad": { id: "6", slug: "ballad" },
+                "Chachacha": { id: "7", slug: "chachacha" },
+                "Disco": { id: "8", slug: "disco" },
+                "Rhumba": { id: "9", slug: "rhumba" },
+                "Tango": { id: "10", slug: "tango" },
+                "Boston": { id: "11", slug: "boston" },
+                "Fox": { id: "12", slug: "fox" },
+                "Rock": { id: "13", slug: "rock" },
+                "Valse": { id: "14", slug: "valse" },
+                "Bossa Nova": { id: "15", slug: "bossa-nova" },
+                "Pop": { id: "16", slug: "pop" },
+                "Habanera": { id: "17", slug: "habanera" },
+                "Twist": { id: "18", slug: "twist" },
+                "March": { id: "19", slug: "march" },
+                "Pasodoble": { id: "20", slug: "pasodoble" },
+                "Slow Ballad": { id: "21", slug: "slow-ballad" },
+                "Rap": { id: "22", slug: "rap" },
+                "Samba": { id: "23", slug: "samba" },
+                "Pop Ballad": { id: "24", slug: "pop-ballad" },
+                "Rock Ballad": { id: "25", slug: "rock-ballad" }
+            };
+            const known = knownRhythms[rhythm];
+            if (known) {
+                rhythmId = known.id;
+                rhythmSlug = known.slug;
+            }
+        }
     }
 
     let lyricText = "";
@@ -103,7 +174,12 @@ async function getSong(url) {
         });
     });
 
-    return { title, tone, composers, category, rhythm, lyrics: uniqueLyrics, singerTones };
+    return {
+        title, tone, composers,
+        category, categoryId, categorySlug,
+        rhythm, rhythmId, rhythmSlug,
+        lyrics: uniqueLyrics, singerTones
+    };
 }
 
 module.exports = getSong;
