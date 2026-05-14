@@ -31,19 +31,25 @@ async function getSong(url) {
     let category = "";
     let categoryId = "";
     let categorySlug = "";
-    const breadcrumbRegex = /"@type":\s*"BreadcrumbList"[\s\S]*?"itemListElement":\s*\[([\s\S]*?)\]/g;
-    while ((match = breadcrumbRegex.exec(html)) !== null) {
-        const items = match[1];
-        const pos2Match = items.match(/"position":\s*2[\s\S]*?"name":\s*"([^"]+)"[\s\S]*?"item":\s*"([^"]+)"/);
-        if (pos2Match) {
-            category = pos2Match[1];
-            const urlMatch = pos2Match[2].match(/\/category\/(\d+)\/([^\.]+)/);
-            if (urlMatch) {
-                categoryId = urlMatch[1];
-                categorySlug = urlMatch[2];
+    // Extract all JSON-LD script blocks and parse them
+    const jsonLdRegex = /<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi;
+    let ldMatch;
+    while ((ldMatch = jsonLdRegex.exec(html)) !== null) {
+        try {
+            const json = JSON.parse(ldMatch[1]);
+            if (json["@type"] === "BreadcrumbList" && json.itemListElement) {
+                const pos2 = json.itemListElement.find(item => item.position === 2);
+                if (pos2) {
+                    category = pos2.name || "";
+                    const urlMatch = (pos2.item || "").match(/\/category\/(\d+)\/([^\.]+)/);
+                    if (urlMatch) {
+                        categoryId = urlMatch[1];
+                        categorySlug = urlMatch[2];
+                    }
+                    break;
+                }
             }
-            break;
-        }
+        } catch(e) {}
     }
 
     // Điệu (rhythm) - name from label, ID + slug from dropdown links
