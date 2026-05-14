@@ -10,7 +10,13 @@ async function getGotScraping() {
 
 async function fetchHtml(url, timeout = 15000) {
     const gs = await getGotScraping();
-    const { body } = await gs({ url, timeout: { request: timeout } });
+    const { body } = await gs({
+        url,
+        timeout: { request: timeout },
+        headers: {
+            'Referer': 'https://hopamviet.vn/',
+        }
+    });
     return body;
 }
 
