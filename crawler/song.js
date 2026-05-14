@@ -14,6 +14,37 @@ async function getSong(url) {
 
     let tone = $("#song-tone").text().replace("[", "").replace("]", "").trim();
 
+    // Sáng tác (composer) - extract from all /chord/composer/ links
+    const composers = [];
+    const composerSet = new Set();
+    const composerRegex = /\/chord\/composer\/\d+\/[^"]*"[^>]*>([^<]+)<\/a>/g;
+    let match;
+    while ((match = composerRegex.exec(html)) !== null) {
+        const name = match[1].trim();
+        if (name && !composerSet.has(name)) {
+            composerSet.add(name);
+            composers.push(name);
+        }
+    }
+
+    // Thể loại (category) - from JSON-LD BreadcrumbList position 2
+    let category = "";
+    const breadcrumbRegex = /"@type":\s*"BreadcrumbList"[\s\S]*?"itemListElement":\s*\[([\s\S]*?)\]/g;
+    while ((match = breadcrumbRegex.exec(html)) !== null) {
+        const items = match[1];
+        const pos2Match = items.match(/"position":\s*2[\s\S]*?"name":\s*"([^"]+)"/);
+        if (pos2Match) {
+            category = pos2Match[1];
+            break;
+        }
+    }
+
+    // Điệu (rhythm)
+    let rhythm = $("#currentRhythmLabel").text().trim();
+    if (!rhythm || rhythm === "Chọn điệu") {
+        rhythm = "";
+    }
+
     let lyricText = "";
     for (const selector of ["#lyricBox", "#song-content-wrapper", ".lyric-block", ".song-content"]) {
         const el = $(selector);
@@ -48,9 +79,8 @@ async function getSong(url) {
     const uniqueLyrics = [...new Set(lyrics)];
 
     const videoSources = [];
-    const regex = /songSources\[(\d+)\]\s*=\s*\{[\s\S]*?"music_id":"(.*?)"/g;
-    let match;
-    while ((match = regex.exec(html)) !== null) {
+    const videoRegex = /songSources\[(\d+)\]\s*=\s*\{[\s\S]*?"music_id":"(.*?)"/g;
+    while ((match = videoRegex.exec(html)) !== null) {
         videoSources.push({
             index: parseInt(match[1]),
             youtubeId: match[2],
@@ -73,7 +103,7 @@ async function getSong(url) {
         });
     });
 
-    return { title, tone, lyrics: uniqueLyrics, singerTones };
+    return { title, tone, composers, category, rhythm, lyrics: uniqueLyrics, singerTones };
 }
 
 module.exports = getSong;
