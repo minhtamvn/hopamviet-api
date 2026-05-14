@@ -1,61 +1,22 @@
-const axios = require("axios");
-
 const cheerio = require("cheerio");
-
-const agent = axios.create({
-    timeout: 15000,
-    headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-    }
-});
+const { fetchHtml } = require("../utils/scraper");
 
 async function getSong(url) {
 
-    const { data: html } = await agent.get(url);
-
+    const html = await fetchHtml(url);
     const $ = cheerio.load(html);
 
     $("script").remove();
     $("style").remove();
     $("noscript").remove();
 
-    // ====================================
-    // TITLE
-    // ====================================
+    const title = $("h1").first().text().replace(/\s+/g, " ").trim();
 
-    const title = $("h1")
-        .first()
-        .text()
-        .replace(/\s+/g, " ")
-        .trim();
-
-    // ====================================
-    // CURRENT TONE
-    // ====================================
-
-    let tone = $("#song-tone")
-        .text()
-        .replace("[", "")
-        .replace("]", "")
-        .trim();
-
-    // ====================================
-    // LYRIC
-    // ====================================
+    let tone = $("#song-tone").text().replace("[", "").replace("]", "").trim();
 
     let lyricText = "";
-
-    const possibleSelectors = [
-        "#lyricBox",
-        "#song-content-wrapper",
-        ".lyric-block",
-        ".song-content"
-    ];
-
-    for (const selector of possibleSelectors) {
-
+    for (const selector of ["#lyricBox", "#song-content-wrapper", ".lyric-block", ".song-content"]) {
         const el = $(selector);
-
         if (el.length && el.text().includes("[")) {
             lyricText = el.text();
             break;
@@ -80,29 +41,15 @@ async function getSong(url) {
         .filter(line => {
             if (!line) return false;
             if (!line.includes("[")) return false;
-            if (
-                line.includes("function") ||
-                line.includes("var ") ||
-                line.includes("songSources")
-            ) {
-                return false;
-            }
+            if (line.includes("function") || line.includes("var ") || line.includes("songSources")) return false;
             return true;
         });
 
     const uniqueLyrics = [...new Set(lyrics)];
 
-    // ====================================
-    // VIDEO SOURCES
-    // ====================================
-
     const videoSources = [];
-
-    const regex =
-        /songSources\[(\d+)\]\s*=\s*\{[\s\S]*?"music_id":"(.*?)"/g;
-
+    const regex = /songSources\[(\d+)\]\s*=\s*\{[\s\S]*?"music_id":"(.*?)"/g;
     let match;
-
     while ((match = regex.exec(html)) !== null) {
         videoSources.push({
             index: parseInt(match[1]),
@@ -112,34 +59,21 @@ async function getSong(url) {
         });
     }
 
-    // ====================================
-    // SINGER TONES
-    // ====================================
-
     const singerTones = [];
-
     $("#inline-singer-tones button").each((i, el) => {
         const spans = $(el).find("span");
-
         const singer = $(spans[0]).text().replace(":", "").trim();
         const tone = $(spans[1]).text().trim();
         const video = videoSources[i] || null;
-
         singerTones.push({
-            singer,
-            tone,
+            singer, tone,
             youtubeId: video?.youtubeId || "",
             embedUrl: video?.embedUrl || "",
             thumbnail: video?.thumbnail || ""
         });
     });
 
-    return {
-        title,
-        tone,
-        lyrics: uniqueLyrics,
-        singerTones
-    };
+    return { title, tone, lyrics: uniqueLyrics, singerTones };
 }
 
 module.exports = getSong;
