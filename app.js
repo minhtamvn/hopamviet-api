@@ -74,10 +74,12 @@ app.get("/song.html", (req, res) => {
 // START
 // =========================
 
-app.listen(11123, () => {
+const PORT = process.env.PORT || 11123;
+
+app.listen(PORT, () => {
 
     console.log(
-        "Server running at port 11123"
+        `Server running at port ${PORT}`
     );
 
 });
