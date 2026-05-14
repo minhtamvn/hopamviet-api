@@ -71,11 +71,20 @@ async function getRhythm(rhythmId, rhythmSlug = "", page = 1) {
 
         if (!title || !href) return;
 
+        // Extract YouTube ID from thumbnail image
+        let youtubeId = "";
+        const imgSrc = $(el).find("img").attr("src");
+        if (imgSrc) {
+            const ytMatch = imgSrc.match(/img\.youtube\.com\/vi\/([^/]+)/);
+            if (ytMatch) youtubeId = ytMatch[1];
+        }
+
         songs.push({
             title,
             artist,
             preview,
             views,
+            youtubeId,
             url: href.startsWith("http") ? href : `${BASE}${href}`
         });
     });
