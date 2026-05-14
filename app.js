@@ -2,8 +2,6 @@ const express = require("express");
 
 const cors = require("cors");
 
-const path = require("path");
-
 const app = express();
 
 // =========================
@@ -34,41 +32,6 @@ app.use("/api/search", searchRoute);
 app.use("/api/song", songRoute);
 
 app.use("/api/trending", trendingRoute);
-
-// =========================
-// STATIC FRONTEND
-// =========================
-
-const clientPath =
-    path.join(__dirname, "../client");
-
-app.use(express.static(clientPath));
-
-// =========================
-// PAGES
-// =========================
-
-app.get("/", (req, res) => {
-
-    res.sendFile(
-        path.join(
-            clientPath,
-            "index.html"
-        )
-    );
-
-});
-
-app.get("/song.html", (req, res) => {
-
-    res.sendFile(
-        path.join(
-            clientPath,
-            "song.html"
-        )
-    );
-
-});
 
 // =========================
 // START
