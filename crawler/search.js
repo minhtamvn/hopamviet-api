@@ -17,8 +17,14 @@ async function searchSong(keyword) {
         if (!href) return;
 
         const fullUrl = href.startsWith("http") ? href : `${BASE}${href}`;
+        const rawText = $(el).text();
 
-        let text = $(el).text().replace(/\s+/g, " ").trim();
+        // Extract views before cleaning (look for number patterns with optional K)
+        let views = "";
+        const viewMatch = rawText.match(/(\d[\d,.]*K?)\s*$/m);
+        if (viewMatch) views = viewMatch[1].trim();
+
+        let text = rawText.replace(/\s+/g, " ").trim();
         if (!text) return;
 
         if (text.includes("♪")) {
@@ -30,13 +36,13 @@ async function searchSong(keyword) {
         let title = text;
         let artist = "";
 
-        const lines = $(el).text().split("\n").map(v => v.trim()).filter(Boolean);
+        const lines = rawText.split("\n").map(v => v.trim()).filter(Boolean);
         if (lines.length >= 2) {
             title = lines[0];
             artist = lines[1];
         }
 
-        results.push({ title, artist, url: fullUrl });
+        results.push({ title, artist, views, url: fullUrl });
     });
 
     const unique = [];
