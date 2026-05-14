@@ -2,13 +2,18 @@ const express = require("express");
 
 const router = express.Router();
 
+const axios = require("axios");
+
 const cheerio = require("cheerio");
 
-const getBrowser =
-    require("../utils/browser");
+const BASE = "https://hopamviet.vn";
 
-const createPage =
-    require("../utils/createPage");
+const agent = axios.create({
+    timeout: 30000,
+    headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
+});
 
 // =========================
 // CACHE
@@ -30,189 +35,73 @@ async function updateTrending() {
 
         isUpdating = true;
 
-        console.log(
-            "Updating trending cache..."
-        );
+        console.log("Updating trending cache...");
 
-        const browser =
-            await getBrowser();
+        const { data: html } = await agent.get(`${BASE}/chord/hot`);
 
-        const page =
-            await createPage(browser);
+        const $ = cheerio.load(html);
 
-        // =========================
-        // BLOCK HEAVY RESOURCES
-        // =========================
-
-        await page.setRequestInterception(
-            true
-        );
-
-        page.on(
-            "request",
-            req => {
-
-                const type =
-                    req.resourceType();
-
-                if (
-
-                    type === "image" ||
-                    type === "font" ||
-                    type === "media"
-
-                ) {
-
-                    req.abort();
-
-                } else {
-
-                    req.continue();
-
-                }
-
-            }
-        );
-
-        // =========================
-        // LOAD PAGE
-        // =========================
-
-        await page.goto(
-
-            "https://hopamviet.vn/chord/hot",
-
-            {
-
-                waitUntil:
-                    "domcontentloaded",
-
-                timeout: 60000
-
-            }
-
-        );
-
-        // =========================
-        // WAIT SONGS
-        // =========================
-
-        await page.waitForSelector(
-            "a.song-card",
-            {
-                timeout: 15000
-            }
-        );
-
-        const html =
-            await page.content();
-
-        await page.close();
-
-        // =========================
-        // PARSE
-        // =========================
-
-        const $ =
-            cheerio.load(html);
-
-        const songs =
-            [];
+        const songs = [];
 
         $("a.song-card")
             .slice(0, 20)
             .each((i, el) => {
 
-                const title =
-                    $(el)
-                        .find(".font-bold")
-                        .first()
-                        .text()
-                        .replace(/\s+/g, " ")
-                        .trim();
+                const title = $(el)
+                    .find(".font-bold")
+                    .first()
+                    .text()
+                    .replace(/\s+/g, " ")
+                    .trim();
 
-                const artist =
-                    $(el)
-                        .find(".truncate")
-                        .eq(1)
-                        .text()
-                        .replace(/\s+/g, " ")
-                        .trim();
+                const artist = $(el)
+                    .find(".truncate")
+                    .eq(1)
+                    .text()
+                    .replace(/\s+/g, " ")
+                    .trim();
 
-                const preview =
-                    $(el)
-                        .find(".italic")
-                        .text()
-                        .replace(/^♪/, "")
-                        .replace(/\s+/g, " ")
-                        .trim();
+                const preview = $(el)
+                    .find(".italic")
+                    .text()
+                    .replace(/^♪/, "")
+                    .replace(/\s+/g, " ")
+                    .trim();
 
-                const views =
-                    $(el)
-                        .find(".font-semibold")
-                        .last()
-                        .text()
-                        .trim();
+                const views = $(el)
+                    .find(".font-semibold")
+                    .last()
+                    .text()
+                    .trim();
 
-                const href =
-                    $(el).attr("href");
+                const href = $(el).attr("href");
 
-                if (
-                    !title ||
-                    !href
-                ) return;
+                if (!title || !href) return;
 
                 songs.push({
-
-                    rank:
-                        i + 1,
-
+                    rank: i + 1,
                     title,
-
                     artist,
-
                     preview,
-
                     views,
-
-                    url:
-                        href.startsWith("http")
-                            ? href
-                            : `https://hopamviet.vn${href}`
-
+                    url: href.startsWith("http")
+                        ? href
+                        : `${BASE}${href}`
                 });
-
             });
 
-        // =========================
-        // SAVE ONLY IF SUCCESS
-        // =========================
-
         if (songs.length) {
-
-            cacheData =
-                songs;
-
-            console.log(
-                `Trending updated: ${songs.length}`
-            );
-
+            cacheData = songs;
+            console.log(`Trending updated: ${songs.length}`);
         } else {
-
-            console.log(
-                "Trending parse failed"
-            );
-
+            console.log("Trending parse failed");
         }
 
     } catch (err) {
-
-        console.log(err);
-
+        console.log("Trending error:", err.message);
     }
 
     isUpdating = false;
-
 }
 
 // =========================
@@ -227,23 +116,14 @@ updateTrending();
 
 // 60 phút
 
-setInterval(
-
-    updateTrending,
-
-    1000 * 60 * 60
-
-);
+setInterval(updateTrending, 1000 * 60 * 60);
 
 // =========================
 // API
 // =========================
 
 router.get("/", async (req, res) => {
-
     res.json(cacheData);
-
 });
 
-module.exports =
-    router;
+module.exports = router;

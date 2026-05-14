@@ -1,41 +1,27 @@
+const axios = require("axios");
+
 const cheerio = require("cheerio");
 
-const getBrowser =
-    require("../utils/browser");
+const BASE = "https://hopamviet.vn";
 
-const createPage =
-    require("../utils/createPage");
+const agent = axios.create({
+    timeout: 15000,
+    headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
+});
 
 async function searchSong(keyword) {
 
-    const browser = await getBrowser();
-
-    const page =
-        await createPage(browser);
-
-    await page.goto(
-        `https://hopamviet.vn/chord/search?song=${encodeURIComponent(keyword)}`,
-        {
-            waitUntil: "domcontentloaded",
-            timeout: 0
-        }
+    const { data: html } = await agent.get(
+        `${BASE}/chord/search?song=${encodeURIComponent(keyword)}`
     );
-
-    const html = await page.content();
-
-    // DEBUG
-    require("fs").writeFileSync(
-        "search-debug.html",
-        html
-    );
-
-    await page.close();
 
     const $ = cheerio.load(html);
 
     const results = [];
 
-    $("a[href*='/chord/song/']").each((i, el) => {
+    $('a[href*="/chord/song/"]').each((i, el) => {
 
         const href = $(el).attr("href");
 
@@ -44,7 +30,7 @@ async function searchSong(keyword) {
         const fullUrl =
             href.startsWith("http")
                 ? href
-                : "https://hopamviet.vn" + href;
+                : `${BASE}${href}`;
 
         let text = $(el)
             .text()
@@ -54,11 +40,7 @@ async function searchSong(keyword) {
         if (!text) return;
 
         if (text.includes("♪")) {
-
-            text =
-                text.split("♪")[0]
-                .trim();
-
+            text = text.split("♪")[0].trim();
         }
 
         text = text
@@ -67,7 +49,6 @@ async function searchSong(keyword) {
             .trim();
 
         let title = text;
-
         let artist = "";
 
         const lines = $(el)
@@ -77,41 +58,21 @@ async function searchSong(keyword) {
             .filter(Boolean);
 
         if (lines.length >= 2) {
-
             title = lines[0];
-
             artist = lines[1];
-
         }
 
-        results.push({
-
-            title,
-
-            artist,
-
-            url: fullUrl
-
-        });
-
+        results.push({ title, artist, url: fullUrl });
     });
 
-    // remove duplicates
-
     const unique = [];
-
     const map = new Set();
 
     for (const item of results) {
-
         if (!map.has(item.url)) {
-
             map.add(item.url);
-
             unique.push(item);
-
         }
-
     }
 
     return unique;
